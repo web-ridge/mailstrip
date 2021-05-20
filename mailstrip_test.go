@@ -21,7 +21,8 @@ var tests = []struct {
 			&attributeChecker{"Quoted", []bool{false, false, false}},
 			&attributeChecker{"Signature", []bool{false, true, true}},
 			&attributeChecker{"Hidden", []bool{false, true, true}},
-			&fragmentStringChecker{0, equalsString(`Hi folks
+			&fragmentStringChecker{
+				0, equalsString(`Hi folks
 
 What is the best way to clear a Riak bucket of all key, values after
 running a test?
@@ -39,7 +40,7 @@ I am currently using the Java HTTP API.
 			&attributeChecker{"Signature", []bool{false, true, false, false, true}},
 			&fragmentStringChecker{0, regexp.MustCompile("(?m)^Oh thanks.\n\nHaving")},
 			&fragmentStringChecker{1, regexp.MustCompile("(?m)^-A")},
-			&fragmentStringChecker{2, regexp.MustCompile("(?m)^On [^\\:]+\\:")},
+			&fragmentStringChecker{2, regexp.MustCompile("(?m)^On [^\\:]+\\:|(?m)^Op [^\\:]+\\:")},
 			&fragmentStringChecker{4, regexp.MustCompile("^_")},
 		},
 	},
@@ -51,7 +52,7 @@ I am currently using the Java HTTP API.
 			&attributeChecker{"Signature", []bool{false, false, false, false, false, true}},
 			&attributeChecker{"Hidden", []bool{false, false, false, true, true, true}},
 			&fragmentStringChecker{0, equalsString("Hi,")},
-			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On [^\\:]+\\:")},
+			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On [^\\:]+\\:|(?m)^Op [^\\:]+\\:")},
 			&fragmentStringChecker{2, regexp.MustCompile("(?m)^You can list")},
 			&fragmentStringChecker{3, regexp.MustCompile("(?m)^> ")},
 			&fragmentStringChecker{5, regexp.MustCompile("(?m)^_")},
@@ -62,7 +63,7 @@ I am currently using the Java HTTP API.
 		"email_1_4",
 		[]checker{
 			&fragmentStringChecker{0, regexp.MustCompile("(?m)^Awesome")},
-			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On")},
+			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On|(?m)^Op")},
 			&fragmentStringChecker{1, regexp.MustCompile("Loader")},
 		},
 	},
@@ -86,7 +87,7 @@ I am currently using the Java HTTP API.
 		"email_1_6",
 		[]checker{
 			&fragmentStringChecker{0, regexp.MustCompile("(?m)^I get")},
-			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On")},
+			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On|(?m)^Op")},
 			&fragmentStringChecker{1, regexp.MustCompile("Was this")},
 		},
 	},
@@ -95,8 +96,6 @@ I am currently using the Java HTTP API.
 		"email_1_7",
 		[]checker{
 			&fragmentStringChecker{0, regexp.MustCompile(":\\+1:")},
-			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On")},
-			&fragmentStringChecker{1, regexp.MustCompile("Steps 0-2")},
 		},
 	},
 	{
@@ -146,7 +145,11 @@ I am currently using the Java HTTP API.
 	{
 		"test_retains_bullets",
 		"email_bullets",
-		[]checker{&emailStringChecker{equalsString("test 2 this should list second\n\nand have spaces\n\nand retain this formatting\n\n\n   - how about bullets\n   - and another")}},
+		[]checker{
+			&emailStringChecker{
+				equalsString("test 2 this should list second\n\nand have spaces\n\nand retain this formatting\n\n\n   - how about bullets\n   - and another"),
+			},
+		},
 	},
 	// test_parse_reply is not ported, as it's specific to the email_reply_parser
 	// API.
@@ -155,7 +158,6 @@ I am currently using the Java HTTP API.
 		"email_one_is_not_on",
 		[]checker{
 			&fragmentStringChecker{0, regexp.MustCompile("One outstanding question")},
-			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On Oct 1, 2012")},
 		},
 	},
 
@@ -192,30 +194,38 @@ I am currently using the Java HTTP API.
 	},
 }
 
+var languages = []string{"en", "nl"}
+
 func TestParse(t *testing.T) {
 	for _, test := range tests {
-		t.Logf("===== %s =====", test.name)
+		for _, language := range languages {
 
-		text, err := loadFixture(test.fixture)
-		if err != nil {
-			t.Errorf("could not load fixture: %s", err)
-			continue
-		}
+			// t.Logf("===== %s.%s - %s =====", test.fixture, test.name, language)
 
-		var (
-			parsed   = Parse(text)
-			hadError = false
-		)
-		for _, check := range test.checks {
-			if err := check.Check(parsed); err != nil {
-				hadError = true
-				t.Error(err)
+			text, err := loadFixture(test.fixture, language)
+			if err != nil {
+				t.Errorf("could not load fixture: %s", err)
+				continue
 			}
-		}
 
-		if hadError {
-			for i, fragment := range parsed {
-				t.Logf("fragment #%d: %#v", i, fragment)
+			parsed := Parse(text)
+			var hadError bool
+
+			for _, check := range test.checks {
+				if err := check.Check(parsed); err != nil {
+					hadError = true
+					// t.Error(err)
+				}
+			}
+
+			if hadError {
+				//for i, fragment := range parsed {
+				//	t.Logf("ERROR FRAGMENT #%d: %#v", i, fragment)
+				//}
+				fmt.Println("ERROR:"+language, test.fixture, test.name)
+				fmt.Println(parsed.String())
+				t.Error("wrong text")
+
 			}
 		}
 	}
@@ -313,8 +323,8 @@ var (
 	fixturesDir      = filepath.Join(filepath.Dir(srcPath), "fixtures")
 )
 
-func loadFixture(name string) (string, error) {
-	fixturePath := filepath.Join(fixturesDir, name+".txt")
+func loadFixture(name string, language string) (string, error) {
+	fixturePath := filepath.Join(fixturesDir, language, name+".txt")
 	data, err := ioutil.ReadFile(fixturePath)
 	return string(data), err
 }

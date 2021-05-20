@@ -49,14 +49,15 @@ var (
 	// e-mail client. e.g. gmail does that for lines exceeding 80 chars
 	multiLineReplyHeaderRegexps = []*regexp.Regexp{
 		// e.g. On Aug 22, 2011, at 7:37 PM, defunkt<reply@reply.github.com> wrote:
-		regexp.MustCompile("(?sm)^(On\\s(?:.+)wrote:)$"),
+		// test regex replace "\s\+\sreverseString\("(.*)"\)\s\+\s" with $1
+		regexp.MustCompile("(?sm)^(On\\s(?:.+)wrote:)$|(?sm)^(Op\\s(?:.+)\\sschreef\\s(?:.+):)$|(?sm)^(Op\\s(?:.+)geschreven:)$|(?sm)^(On.*\\d+.*\\d+.*\\d+:\\d+\\s(?:.+))$"),
 		// e.g. 2013/11/13 John Smith <john@smith.org>
-		regexp.MustCompile("(?sm)^(\\d{4}/\\d{1,2}/\\d{1,2} .*<.+@.+>)$"),
+		regexp.MustCompile("(?sm)^(\\d+/\\d+/\\d+ .*<.+@.+>)$"),
 	}
-	sigRegexp         = regexp.MustCompile("(\\d+ swodniW rof >.*<liaM morf tneS|--|__|(?m)\\w-$)|(?m)(^(\\w+\\s*){1,3} " + reverseString("Sent from my") + "$)")
+	sigRegexp         = regexp.MustCompile("(\\d+ " + reverseString("for Windows") + "|" + reverseString("voor Windows") + " >.*<" + reverseString("Sent from Mail") + "|" + reverseString("Verzonden via Mail") + "|--|__|(?m)\\w-$)|(?m)(^(\\w+\\s*){1,3} " + reverseString("Sent from my") + "|" + reverseString("Verstuurd vanaf mijn") + "$)")
 	fwdRegexp         = regexp.MustCompile("(?mi)^--+\\s*" + reverseString("Forwarded message") + "\\s*--+$")
 	quotedRegexp      = regexp.MustCompile("(?m)(>+)$")
-	quoteHeaderRegexp = regexp.MustCompile("(?m)^:etorw.*nO$|^.*[0-9]{4}\\s\\.\\w{2,4}\\s\\d{1,2}\\s.{3,4}$|^\\w{3,4}\\s\\d{1,2}\\s\\w{3,4}\\.\\s[0-9]{4}.*$|^>.*\\d{1,2}/\\d{1,2}/\\d{4}$|^(?m)^.*?[0-9]{4}\\s\\.\\w+\\s\\d\\s.*n\\.*$")
+	quoteHeaderRegexp = regexp.MustCompile("(?m)^:" + reverseString("geschreven") + "|" + reverseString("wrote") + "|" + reverseString("schreef") + ".*" + reverseString("On") + "|" + reverseString("Op") + "$|^.*\\d.*\\d+.*\\d+.*\\d+.*$")
 )
 
 func (p *parser) Parse(text string) Email {
@@ -66,7 +67,9 @@ func (p *parser) Parse(text string) Email {
 	// Check for multi-line reply headers. Some clients break up the "On DATE,
 	// NAME <EMAIL> wrote:" line (and similar quote headers) into multiple lines.
 	for _, r := range multiLineReplyHeaderRegexps {
-		if m := r.FindStringSubmatch(text); len(m) == 2 {
+		m := r.FindStringSubmatch(text)
+
+		if len(m) == 2 {
 			// Remove all new lines from the reply header.
 			text = strings.Replace(text, m[1], strings.Replace(m[1], "\n", "", -1), -1)
 		}

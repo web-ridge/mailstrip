@@ -1,0 +1,10 @@
+Thank, this is really helpful.
+
+One outstanding question I had:
+
+Locally (on development), when I run...
+
+Op 22 dec. 2020 om 16:12 heeft Richard Lindhout <info@webridge.nl> het volgende geschreven:
+
+> The good news is that I've found a much better query for lastLocation.
+>
