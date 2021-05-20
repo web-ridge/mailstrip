@@ -222,9 +222,9 @@ func TestParse(t *testing.T) {
 				//for i, fragment := range parsed {
 				//	t.Logf("ERROR FRAGMENT #%d: %#v", i, fragment)
 				//}
-				fmt.Println("ERROR:"+language, test.fixture, test.name)
-				fmt.Println(parsed.String())
-				t.Error("wrong text")
+				t.Errorf("ERROR: %v %v %v", language, test.fixture, test.name)
+
+				t.Error(parsed.String())
 
 			}
 		}
