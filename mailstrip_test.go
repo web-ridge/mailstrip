@@ -62,9 +62,9 @@ I am currently using the Java HTTP API.
 		"test_recognizes_date_string_above_quote",
 		"email_1_4",
 		[]checker{
-			&fragmentStringChecker{0, regexp.MustCompile("(?m)^Awesome")},
-			&fragmentStringChecker{1, regexp.MustCompile("(?m)^On|(?m)^Op")},
-			&fragmentStringChecker{1, regexp.MustCompile("Loader")},
+			&fragmentStringChecker{
+				0, equalsString(`Awesome! I haven't had another problem with it.`),
+			},
 		},
 	},
 	{
